@@ -23,7 +23,7 @@ async function createUser(req, res) {
   let user;
   let userExist;
   let idUserExist;
-  req = req.body.data[0];
+  req = req.body.data;
   try {
     let idUser = randomIdUser(8);
     idUserExist = await initModel.user.findAll({
@@ -95,7 +95,7 @@ async function createUser(req, res) {
  * en la base de datos y si coinciden los datos de entrada.
  */
 async function userLogin(req, res) {
-  req = req.body.data[0].user;
+  req = req.body.data.user;
   const { password } = req;
   try {
     const user = await initModel.user.findOne({
@@ -143,7 +143,7 @@ async function userLogin(req, res) {
  * en la base de datos y si coinciden los datos de entrada.
  */
 async function userLogout(req, res) {
-  req = req.body.data[0].user;
+  req = req.body.data.user;
   try {
     let status = {
       statusActive: false,
@@ -189,7 +189,7 @@ async function deleteUserLogin(req, res) {
  */
 
 async function updatePasswordUserLogin(req, res) {
-  req = req.body.data[0];
+  req = req.body.data;
   try {
     const passwordNew = await bcrypt.hash(req.user.password, 10);
     let password = {

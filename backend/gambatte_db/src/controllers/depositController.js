@@ -17,17 +17,17 @@ async function createDeposit(req, res) {
     req = req.body.data;
 
     cards = await initModel.card.findAll({
-      where: { user_login_id: req[2].user.id },
+      where: { user_login_id: req.user.id },
     });
 
-    const numberCard = await bcrypt.hash(req[0].cardInfo.cardNumber, 10);
-    const ccvCard = await bcrypt.hash(req[0].cardInfo.ccv, 10);
-    const yearCard = await bcrypt.hash(req[0].cardInfo.expYear, 10);
-    const monthCard = await bcrypt.hash(req[0].cardInfo.month, 10);
+    const numberCard = await bcrypt.hash(req.cardInfo.cardNumber, 10);
+    const ccvCard = await bcrypt.hash(req.cardInfo.ccv, 10);
+    const yearCard = await bcrypt.hash(req.cardInfo.expYear, 10);
+    const monthCard = await bcrypt.hash(req.cardInfo.month, 10);
 
     for (card in cards) {
       cardExits = await bcrypt.compare(
-        req[0].cardInfo.cardNumber,
+        req.cardInfo.cardNumber,
         cards[card].dataValues.cardNumber
       );
     }
@@ -38,21 +38,21 @@ async function createDeposit(req, res) {
         ccv: ccvCard,
         expYear: yearCard,
         month: monthCard,
-        termAndConditions: req[0].cardInfo.termAndConditions,
-        user_login_id: req[2].user.id,
+        termAndConditions: req.cardInfo.termAndConditions,
+        user_login_id: req.user.id,
       }));
 
     //cards.map(async(card)=>{ cardExits = await bcrypt.compare(req[0].cardInfo.cardNumber, card.dataValues.cardNumber)})
 
     user = await initModel.user.findOne({
-      where: { id: req[2].user.id },
+      where: { id: req.user.id },
     });
 
     cards = await initModel.deposit.create({
-      amount: req[1].deposit.amount,
-      date: req[1].deposit.depositDate,
-      ecommerce: req[1].deposit.ecommerce,
-      status: req[1].deposit.state,
+      amount: req.deposit.amount,
+      date: req.deposit.depositDate,
+      ecommerce: req.deposit.ecommerce,
+      status: req.deposit.state,
       account_idaccount: user.dataValues.account_idaccount,
     });
     if (cards) {
