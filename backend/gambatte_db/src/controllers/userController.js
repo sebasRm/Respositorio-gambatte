@@ -3,6 +3,7 @@ const initModels = require("../models/init-models");
 const STATICVAR = require("../helpers/utils").staticVar;
 const response = require("../helpers/utils").response;
 const randomIdUser = require("../helpers/utils").generateRandomIdUser;
+const { generateToken } = require("../helpers/utils");
 /// singleton implementar
 
 /// dioccionaro de mensajes y errores
@@ -40,7 +41,7 @@ async function createUser(req, res) {
       if (userExist.length == 0) {
         const password = await bcrypt.hash(req.user.password, 10);
         account = await initModel.account.create({});
-        user = await initModel.user.create({
+        userCreate = await initModel.user.create({
           idUser: idUser,
           fullName: req.user.fullName,
           email: req.user.email,
@@ -48,18 +49,31 @@ async function createUser(req, res) {
           password: password,
           rol_idrol: 2,
           account_idaccount: account.dataValues.idaccount,
-          termsAndConditions: req.user.termsAndConditions,
+          termsAndConditions: req.user.termAndConditions,
           registerStatus: true,
           status: false,
           finishRegister: false,
         });
+        user = await initModel.user.findAll({
+          where: {
+            id: userCreate.dataValues.id,
+          },
+          include: [
+            {
+              model: initModel.rol,
+              as: "rol_",
+            },
+          ],
+        });
+        console.log("user", user);
+        delete user[0].dataValues.password;
         if (user) {
           let responses = response(
             STATICVAR.USER_REGISTER_SUCCESSFUL,
             201,
             res,
             "ok",
-            []
+            user
           );
           return responses;
         }
@@ -98,7 +112,7 @@ async function userLogin(req, res) {
   req = req.body.data.user;
   const { password } = req;
   try {
-    const user = await initModel.user.findOne({
+    let user = await initModel.user.findOne({
       where: { email: req.email },
       include: [
         {
@@ -117,22 +131,38 @@ async function userLogin(req, res) {
         "password",
       ],
     });
-    if(user)
-    {
+    if (user) {
       const login = await bcrypt.compare(password, user.dataValues.password);
       delete user.dataValues.password;
       if (login) {
-        let responses = response("usuario logeado...", 200, res, "ok", user);
+        user.dataValues.role = user.dataValues.rol_.dataValues.role;
+        delete user.dataValues.rol_
+
+        const dataUser = {
+          user: user,
+          accessToken: generateToken(user),
+        };
+        let responses = response(
+          "Usuario logeado...",
+          200,
+          res,
+          "ok",
+          dataUser
+        );
         return responses;
       }
       let responses = response(STATICVAR.user_ERROR, 400, res, false, []);
       return responses;
-    }
-    else{
-      let responses = response('El usuario no se encuentra registrado', 400, res, false, []);
+    } else {
+      let responses = response(
+        "El usuario no se encuentra registrado",
+        400,
+        res,
+        false,
+        []
+      );
       return responses;
     }
- 
   } catch (error) {
     console.log(STATICVAR.user_ERROR_METHOD, error);
   }
@@ -160,7 +190,7 @@ async function userLogout(req, res) {
   } catch (error) {
     console.log(STATICVAR.USER_LOGOUT_ERROR_METHOD, error);
   }
-} 
+}
 
 /**
  * Función para eliminar un usuario
@@ -173,10 +203,22 @@ async function deleteUserLogin(req, res) {
       where: { id: req.id },
     });
     if (user == 1) {
-      let responses = response(STATICVAR.USER_DELETED_SUCCESSFUL, 200, res, "ok", []);
+      let responses = response(
+        STATICVAR.USER_DELETED_SUCCESSFUL,
+        200,
+        res,
+        "ok",
+        []
+      );
       return responses;
     } else {
-      let responses = response(STATICVAR.USER_DELETED_ERROR, 400, res, false, []);
+      let responses = response(
+        STATICVAR.USER_DELETED_ERROR,
+        400,
+        res,
+        false,
+        []
+      );
       return responses;
     }
   } catch (error) {
@@ -199,7 +241,13 @@ async function updatePasswordUserLogin(req, res) {
       where: { id: req.user.id },
     });
     if (user[0] == "1") {
-      let responses = response(STATICVAR.USER_UPDATE_SUCCESSFUL, 200, res, "ok", []);
+      let responses = response(
+        STATICVAR.USER_UPDATE_SUCCESSFUL,
+        200,
+        res,
+        "ok",
+        []
+      );
       return responses;
     }
     let responses = response(STATICVAR.USER_UPDATE_ERROR, 400, res, false, []);
@@ -235,13 +283,31 @@ async function updateAvatarUserLogin(req, res) {
         where: { id: req.query.id },
       });
       if (user[0] == "1") {
-        let responses = response(STATICVAR.USER_UPDATE_AVATAR_SUCCESSFUL, 200, res, "ok", filename);
+        let responses = response(
+          STATICVAR.USER_UPDATE_AVATAR_SUCCESSFUL,
+          200,
+          res,
+          "ok",
+          filename
+        );
         return responses;
       }
-      let responses = response(STATICVAR.USER_UPDATE_AVATAR_ERROR, 400, res, false, []);
+      let responses = response(
+        STATICVAR.USER_UPDATE_AVATAR_ERROR,
+        400,
+        res,
+        false,
+        []
+      );
       return responses;
     } else {
-      let responses = response(STATICVAR.USER_UPDATE_AVATAR_LOADING_ERROR, 400, res, false, []);
+      let responses = response(
+        STATICVAR.USER_UPDATE_AVATAR_LOADING_ERROR,
+        400,
+        res,
+        false,
+        []
+      );
       return responses;
     }
   } catch (error) {
@@ -255,26 +321,39 @@ async function updateAvatarUserLogin(req, res) {
 
 async function updateUserLogin(req, res) {
   try {
-    const { id,fullName, secondName, email, phone, documentNumber } = req.query;
-    let {documentType} =  req.query;
-    console.log("documentType", documentType)
-    documentType =='CC' ?  documentType =1 :   documentType =2;
+    const { id, fullName, secondName, email, phone, documentNumber } =
+      req.query;
+    let { documentType } = req.query;
+    console.log("documentType", documentType);
+    documentType == "CC" ? (documentType = 1) : (documentType = 2);
     let data = {
       fullName: fullName,
       secondName: secondName,
       email: email,
       phone: phone,
       documentNumber: documentNumber,
-      document_type_iddocument_type:documentType
+      document_type_iddocument_type: documentType,
     };
     const user = await initModel.user.update(data, {
       where: { id: id },
     });
     if (user) {
-      let responses = response("usuario actualizado exitosamente", 200, res, "ok", []);
+      let responses = response(
+        "usuario actualizado exitosamente",
+        200,
+        res,
+        "ok",
+        []
+      );
       return responses;
     } else {
-      let responses = response("Error al actualizar datos del usuario", 400, res, false, []);
+      let responses = response(
+        "Error al actualizar datos del usuario",
+        400,
+        res,
+        false,
+        []
+      );
       return responses;
     }
   } catch (error) {
@@ -284,13 +363,12 @@ async function updateUserLogin(req, res) {
 
 async function findUser(req, res) {
   try {
-
-    const {id}= req.query
-    const users = await initModel.user.findOne( {
+    const { id } = req.query;
+    const users = await initModel.user.findOne({
       where: { id: id },
     });
     if (users) {
-      delete users.dataValues.password
+      delete users.dataValues.password;
       let responses = response("Users", 200, res, "ok", users);
       return responses;
     } else {
@@ -302,12 +380,9 @@ async function findUser(req, res) {
   }
 }
 
-
 async function findUsers(req, res) {
   try {
-
-    const users = await initModel.user.findAll( {
-    });
+    const users = await initModel.user.findAll({});
     if (users) {
       let responses = response("Users", 200, res, "ok", users);
       return responses;
@@ -320,7 +395,6 @@ async function findUsers(req, res) {
   }
 }
 
-
 module.exports = {
   userLogin,
   userLogout,
@@ -330,5 +404,5 @@ module.exports = {
   updateAvatarUserLogin,
   updateUserLogin,
   findUser,
-  findUsers
+  findUsers,
 };

@@ -4,6 +4,7 @@ const controllerAccount= require('../controllers/accountController');
 const controllerDeposit= require('../controllers/depositController');
 const upload = require("../libs/storange");
 
+
 const router = express.Router();
 
 /**
@@ -15,7 +16,7 @@ const router = express.Router();
 
 /** *************************  PETICIONES GET   **************************/
 //            =====>Petición para consultar el balance de un usuario
-router.get('/api/account', controllerAccount.searchBalance);  
+router.get('/api/account/:userId', controllerAccount.searchBalance);  
 
 //            =====>Petición para consultar depositos del usuario
 router.get('/api/deposit', controllerDeposit.searchDeposit);  

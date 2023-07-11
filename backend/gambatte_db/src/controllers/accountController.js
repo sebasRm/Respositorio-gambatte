@@ -7,10 +7,10 @@ let initModel = initModels(sequelize);
  * Función para consultar el abalance del usuario
  */
 async function searchBalance(req, res) {
-    const { id } = req.query;
+    const { userId } = req.params;
     try {
       const user = await initModel.user.findOne({
-        where: { id: id },
+        where: { id: userId },
         include: [
           {
             model: initModel.account,
